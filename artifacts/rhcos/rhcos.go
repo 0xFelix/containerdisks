@@ -75,7 +75,14 @@ func (r *rhcos) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
 }
 
 func (r *rhcos) Tests() []api.ArtifactTest {
-	return []api.ArtifactTest{}
+	return []api.ArtifactTest{
+		func(vmi *kvirtv1.VirtualMachineInstance) error {
+			return tbu.LoginToGeneric(
+				vmi,
+				tbu.NewLoginOptions("core", "core", vmi.Name),
+			)
+		},
+	}
 }
 
 func New(release string) *rhcos {

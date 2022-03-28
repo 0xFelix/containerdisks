@@ -10,6 +10,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/http"
 	"kubevirt.io/containerdisks/pkg/tbu"
+	"kubevirt.io/kubevirt/tests/console"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -89,7 +90,10 @@ func (f *fedora) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
 }
 
 func (f *fedora) Tests() []api.ArtifactTest {
-	return []api.ArtifactTest{}
+	return []api.ArtifactTest{
+		console.SecureBootExpecter,
+		console.LoginToFedora,
+	}
 }
 
 func (f *fedora) releaseMatches(release *Release) bool {

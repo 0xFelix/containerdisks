@@ -11,6 +11,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/containerdisks/pkg/tbu"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -118,7 +119,14 @@ func (c *centos) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
 }
 
 func (c *centos) Tests() []api.ArtifactTest {
-	return []api.ArtifactTest{}
+	return []api.ArtifactTest{
+		func(vmi *kvirtv1.VirtualMachineInstance) error {
+			return tbu.LoginToGeneric(
+				vmi,
+				tbu.NewLoginOptions("centos", "centos", vmi.Name),
+			)
+		},
+	}
 }
 
 // New accepts CentOS 7 and 8 versions. Example patterns are 7-2111, 7-2009, 8.3, 8.4, ...

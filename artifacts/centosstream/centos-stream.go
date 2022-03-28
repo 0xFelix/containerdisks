@@ -11,6 +11,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/containerdisks/pkg/tbu"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -106,7 +107,14 @@ func (c *centos) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
 }
 
 func (c *centos) Tests() []api.ArtifactTest {
-	return []api.ArtifactTest{}
+	return []api.ArtifactTest{
+		func(vmi *kvirtv1.VirtualMachineInstance) error {
+			return tbu.LoginToGeneric(
+				vmi,
+				tbu.NewLoginOptions("centos", "centos", vmi.Name),
+			)
+		},
+	}
 }
 
 // New accepts CentOS Stream 8 and 9 versions.
