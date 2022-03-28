@@ -10,6 +10,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/containerdisks/pkg/tbu"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -64,6 +65,10 @@ func (r *rhcos) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
 		libvmi.WithContainerImage(imgRef),
 		libvmi.WithResourceMemory("1024M"),
 		libvmi.WithTerminationGracePeriod(libvmi.DefaultTestGracePeriod),
+		tbu.WithCloudInitConfigDriveUserData(
+			"{\"ignition\":{\"version\":\"3.3.0\"},\"passwd\":{\"users\":[{\"name\":\"core\",\"passwordHash\":\"$6$51NnxXi3NPrGjYor$IkMdwpTH8e1I3TsD2ZBvJHKlmIWhO9cqazTO2lApjdwqNorVuD8SbHFRdOLVslkO1FoghWYirCMWSUsqz3R0b0\"}]}}",
+			false,
+		),
 	}
 
 	return libvmi.New(libvmi.RandName(r.Metadata().Name), options...)
