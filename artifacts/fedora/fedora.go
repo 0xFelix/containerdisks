@@ -9,6 +9,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/api"
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/containerdisks/pkg/tbu"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -72,8 +73,9 @@ func (f *fedora) Inspect() (*api.ArtifactDetails, error) {
 
 func (f *fedora) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
 	options := []libvmi.Option{
+		tbu.WithSMM(),
 		libvmi.WithRng(),
-		libvmi.WithUefi(false),
+		libvmi.WithUefi(true),
 		libvmi.WithContainerImage(imgRef),
 		libvmi.WithResourceMemory("1024M"),
 		libvmi.WithTerminationGracePeriod(libvmi.DefaultTestGracePeriod),
