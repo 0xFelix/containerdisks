@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"time"
 
 	"github.com/containers/image/v5/pkg/compression/types"
 	"github.com/spf13/cobra"
@@ -31,7 +30,7 @@ func NewPublishImagesCommand(options *common.Options) *cobra.Command {
 		Short: "Determine if containerdisks need an update and push an update to the target registry if needed",
 		Run: func(cmd *cobra.Command, args []string) {
 			wg, errChan := spawnWorkers(options.PublishImagesOptions.Workers, options.Focus, func(a api.Artifact) error {
-				return buildAndPublish(a, options, time.Now())
+				return buildAndPublish(a, options)
 			})
 			wg.Wait()
 
@@ -49,7 +48,7 @@ func NewPublishImagesCommand(options *common.Options) *cobra.Command {
 	return publishCmd
 }
 
-func buildAndPublish(artifact api.Artifact, options *common.Options, timestamp time.Time) error {
+func buildAndPublish(artifact api.Artifact, options *common.Options) error {
 	metadata := artifact.Metadata()
 	log := common.Logger(artifact)
 
@@ -120,7 +119,7 @@ func buildAndPublish(artifact api.Artifact, options *common.Options, timestamp t
 	if err != nil {
 		return fmt.Errorf("error creating the containerdisk : %v", err)
 	}
-	names := prepareTags(timestamp, options.Registry, metadata, artifactInfo)
+	names := prepareTags(options.Registry, metadata, artifactInfo)
 	for _, name := range names {
 		if !options.DryRun {
 			log.Infof("Pushing %s", name)
@@ -133,18 +132,4 @@ func buildAndPublish(artifact api.Artifact, options *common.Options, timestamp t
 	}
 
 	return nil
-}
-
-func prepareTags(timestamp time.Time, registry string, metadata *api.Metadata, artifactDetails *api.ArtifactDetails) []string {
-	imageName := path.Join(registry, metadata.Describe())
-	names := []string{fmt.Sprintf("%s-%s", imageName, timestamp.Format("0601021504"))}
-	for _, tag := range artifactDetails.AdditionalUniqueTags {
-		if tag == "" {
-			continue
-		}
-		names = append(names, fmt.Sprintf("%s:%s", path.Join(registry, metadata.Name), tag))
-	}
-	// the least specific tag is last
-	names = append(names, imageName)
-	return names
 }

@@ -1,6 +1,8 @@
 package images
 
 import (
+	"fmt"
+	"path"
 	"sync"
 
 	"kubevirt.io/containerdisks/cmd/medius/common"
@@ -44,4 +46,18 @@ func fillJobChan(jobChan chan api.Artifact, focus string) {
 
 		jobChan <- common.Registry[i].Artifact
 	}
+}
+
+func prepareTags(registry string, metadata *api.Metadata, artifactDetails *api.ArtifactDetails) []string {
+	imageName := path.Join(registry, metadata.Describe())
+	names := []string{}
+	for _, tag := range artifactDetails.AdditionalUniqueTags {
+		if tag == "" {
+			continue
+		}
+		names = append(names, fmt.Sprintf("%s:%s", path.Join(registry, metadata.Name), tag))
+	}
+	// the least specific tag is last
+	names = append(names, imageName)
+	return names
 }
