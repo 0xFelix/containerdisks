@@ -12,6 +12,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
 	"kubevirt.io/containerdisks/pkg/tbu"
+	"kubevirt.io/containerdisks/pkg/tests"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -126,6 +127,7 @@ func (c *centos) Tests() []api.ArtifactTest {
 				tbu.NewLoginOptions("centos", "centos", vmi.Name),
 			)
 		},
+		tests.GuestOsInfo,
 	}
 }
 

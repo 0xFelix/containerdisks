@@ -12,6 +12,7 @@ import (
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
 	"kubevirt.io/containerdisks/pkg/tbu"
+	"kubevirt.io/containerdisks/pkg/tests"
 	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
@@ -100,6 +101,7 @@ func (r *rhcos) Tests() []api.ArtifactTest {
 				tbu.NewLoginOptions("core", "core", vmi.Name),
 			)
 		},
+		tests.GuestOsInfo,
 	}
 }
 
