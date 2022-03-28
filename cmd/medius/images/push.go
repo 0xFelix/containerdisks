@@ -8,11 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/containers/image/v5/pkg/compression/types"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/ulikunitz/xz"
 	"kubevirt.io/containerdisks/cmd/medius/common"
@@ -32,26 +30,9 @@ func NewPublishImagesCommand(options *common.Options) *cobra.Command {
 		Use:   "push",
 		Short: "Determine if containerdisks need an update and push an update to the target registry if needed",
 		Run: func(cmd *cobra.Command, args []string) {
-			errChan := make(chan error, options.PublishImagesOptions.Workers)
-			jobChan := make(chan api.Artifact, options.PublishImagesOptions.Workers)
-
-			wg := &sync.WaitGroup{}
-			wg.Add(options.PublishImagesOptions.Workers)
-			for x := 0; x < options.PublishImagesOptions.Workers; x++ {
-				go worker(wg, jobChan, options, errChan)
-			}
-
-			for i, desc := range common.Registry {
-				if options.Focus == "" && desc.SkipWhenNotFocused {
-					continue
-				}
-				if options.Focus != "" && options.Focus != desc.Artifact.Metadata().Describe() {
-					continue
-				}
-				jobChan <- common.Registry[i].Artifact
-			}
-			close(jobChan)
-
+			wg, errChan := spawnWorkers(options.PublishImagesOptions.Workers, options.Focus, func(a api.Artifact) error {
+				return buildAndPublish(a, options, time.Now())
+			})
 			wg.Wait()
 
 			select {
@@ -66,16 +47,6 @@ func NewPublishImagesCommand(options *common.Options) *cobra.Command {
 	publishCmd.Flags().IntVar(&options.PublishImagesOptions.Workers, "workers", options.PublishImagesOptions.Workers, "Number of parallel workers")
 
 	return publishCmd
-}
-
-func worker(wg *sync.WaitGroup, job chan api.Artifact, options *common.Options, errChan chan error) {
-	defer wg.Done()
-	for a := range job {
-		if err := buildAndPublish(a, options, time.Now()); err != nil {
-			common.Logger(a).Error(err)
-			errChan <- err
-		}
-	}
 }
 
 func buildAndPublish(artifact api.Artifact, options *common.Options, timestamp time.Time) error {
