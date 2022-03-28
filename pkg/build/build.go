@@ -7,6 +7,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 const (
@@ -15,8 +16,11 @@ const (
 
 func BuildContainerDisk(imgPath string, checksum string) (v1.Image, error) {
 	img := empty.Image
+	img = mutate.MediaType(img, types.OCIManifestSchema1)
+	img = mutate.ConfigMediaType(img, types.OCIConfigJSON)
+
 	layerStream, errChan := StreamLayer(imgPath)
-	layer, err := tarball.LayerFromReader(layerStream)
+	layer, err := tarball.LayerFromReader(layerStream, tarball.WithMediaType(types.OCILayer))
 	if err != nil {
 		return nil, fmt.Errorf("error creating an image layer from disk: %v", err)
 	}

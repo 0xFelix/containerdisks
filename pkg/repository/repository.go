@@ -7,12 +7,14 @@ import (
 	"time"
 
 	"github.com/containers/image/v5/image"
+	"github.com/containers/image/v5/manifest"
 	"github.com/containers/image/v5/transports/alltransports"
 	"github.com/containers/image/v5/types"
 	"github.com/docker/distribution/registry/api/errcode"
 	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	imgspecv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -21,6 +23,7 @@ type ImageInfo struct {
 	Created       *time.Time
 	DockerVersion string
 	Labels        map[string]string
+	Annotations   map[string]string
 	Architecture  string
 	Os            string
 	Layers        []string
@@ -58,6 +61,12 @@ func (r RepositoryImpl) ImageMetadata(imgRef string, insecure bool) (imageInfo *
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error parsing manifest for image")
 	}
+
+	parsedManifest, err := parseManifest(ctx, img)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error parsing manifest of image")
+	}
+
 	imgInspect, err := img.Inspect(ctx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error inspecting image")
@@ -72,6 +81,7 @@ func (r RepositoryImpl) ImageMetadata(imgRef string, insecure bool) (imageInfo *
 		Os:            imgInspect.Os,
 		Layers:        imgInspect.Layers,
 		Env:           imgInspect.Env,
+		Annotations:   parsedManifest.Annotations,
 	}
 
 	return imageInfo, nil
@@ -92,6 +102,24 @@ func parseImageSource(ctx context.Context, sys *types.SystemContext, name string
 	}
 
 	return ref.NewImageSource(ctx, sys)
+}
+
+func parseManifest(ctx context.Context, img types.Image) (*manifest.OCI1, error) {
+	manifestBlob, manifestMIMEType, err := img.Manifest(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to get manifest of image")
+	}
+
+	if manifest.NormalizedMIMEType(manifestMIMEType) != imgspecv1.MediaTypeImageManifest {
+		return nil, fmt.Errorf("unsupported image type %s, can only work with OCIv1 images", manifestMIMEType)
+	}
+
+	parsedManifest, err := manifest.OCI1FromManifest(manifestBlob)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error parsing OCIv1 manifest of image")
+	}
+
+	return parsedManifest, nil
 }
 
 func IsManifestUnknownError(err error) bool {
