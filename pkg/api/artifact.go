@@ -2,7 +2,11 @@ package api
 
 import (
 	"fmt"
+
+	kvirtv1 "kubevirt.io/api/core/v1"
 )
+
+type ArtifactTest func(vmi *kvirtv1.VirtualMachineInstance) error
 
 type ArtifactDetails struct {
 	// SHA256Sum is the checksum of the image to download.
@@ -23,10 +27,8 @@ type Metadata struct {
 	Name string
 	// Version is the moving tag on the container image. For example "35".
 	Version string
-
 	// Description of the project in Markdown format
 	Description string
-
 	// CloudInit Payload example
 	ExampleCloudInitPayload string
 }
@@ -38,4 +40,6 @@ func (m Metadata) Describe() string {
 type Artifact interface {
 	Inspect() (*ArtifactDetails, error)
 	Metadata() *Metadata
+	VMI(imgRef string) *kvirtv1.VirtualMachineInstance
+	Tests() []ArtifactTest
 }

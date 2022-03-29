@@ -5,10 +5,12 @@ import (
 	"fmt"
 
 	"github.com/containers/image/v5/pkg/compression/types"
+	kvirtv1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/containerdisks/pkg/api"
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
 type rhcos struct {
@@ -54,6 +56,21 @@ func (r *rhcos) Inspect() (*api.ArtifactDetails, error) {
 	}
 	return nil, fmt.Errorf("file %q does not exist in the sha256sum file: %v", r.Variant, err)
 
+}
+
+func (r *rhcos) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
+	options := []libvmi.Option{
+		libvmi.WithRng(),
+		libvmi.WithContainerImage(imgRef),
+		libvmi.WithResourceMemory("1024M"),
+		libvmi.WithTerminationGracePeriod(libvmi.DefaultTestGracePeriod),
+	}
+
+	return libvmi.New(libvmi.RandName(r.Metadata().Name), options...)
+}
+
+func (r *rhcos) Tests() []api.ArtifactTest {
+	return []api.ArtifactTest{}
 }
 
 func New(release string) *rhcos {

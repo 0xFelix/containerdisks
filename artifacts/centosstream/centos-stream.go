@@ -6,10 +6,12 @@ import (
 	"sort"
 	"strings"
 
+	kvirtv1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/containerdisks/pkg/api"
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/hashsum"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
 var description = `<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/CentOS_Graphical_Symbol.svg/64px-CentOS_Graphical_Symbol.svg.png" alt="drawing" height="15"/> Centos Stream Generic Cloud images for KubeVirt.
@@ -86,6 +88,25 @@ func (c *centos) Inspect() (*api.ArtifactDetails, error) {
 
 	return nil, fmt.Errorf("file %q does not exist in the sha256sum file: %v", c.Variant, err)
 
+}
+
+func (c *centos) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
+	options := []libvmi.Option{
+		libvmi.WithRng(),
+		libvmi.WithContainerImage(imgRef),
+		libvmi.WithResourceMemory("1024M"),
+		libvmi.WithTerminationGracePeriod(libvmi.DefaultTestGracePeriod),
+		libvmi.WithCloudInitNoCloudUserData(
+			"#cloud-config\nsystem_info:\n  default_user:\n    name: centos\n    plain_text_passwd: centos\n    lock_passwd: False\nwrite_files:\n  - path: /etc/profile.d/disable-bracketed-paste.sh\n    content: |\n      bind 'set enable-bracketed-paste off'\n    permissions: '0755'\n",
+			false,
+		),
+	}
+
+	return libvmi.New(libvmi.RandName(c.Metadata().Name), options...)
+}
+
+func (c *centos) Tests() []api.ArtifactTest {
+	return []api.ArtifactTest{}
 }
 
 // New accepts CentOS Stream 8 and 9 versions.

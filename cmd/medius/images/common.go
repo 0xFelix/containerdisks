@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"sync"
+	"time"
 
 	"kubevirt.io/containerdisks/cmd/medius/common"
 	"kubevirt.io/containerdisks/pkg/api"
@@ -60,4 +61,12 @@ func prepareTags(registry string, metadata *api.Metadata, artifactDetails *api.A
 	// the least specific tag is last
 	names = append(names, imageName)
 	return names
+}
+
+func prepareTimestampTag(registry string, metadata *api.Metadata) string {
+	return fmt.Sprintf(
+		"%s-%s",
+		path.Join(registry, metadata.Describe()),
+		time.Now().Format("0601021504"),
+	)
 }

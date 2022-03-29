@@ -14,6 +14,7 @@ import (
 	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	imgspecv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
@@ -32,7 +33,9 @@ type ImageInfo struct {
 
 type Repository interface {
 	ImageMetadata(imgRef string) (*ImageInfo, error)
+	PullImage(imgRef string, insecure bool) (v1.Image, error)
 	PushImage(img v1.Image, imgRef string) error
+	MutateAnnotations(img v1.Image) (v1.Image, error)
 }
 
 type RepositoryImpl struct {
@@ -87,12 +90,38 @@ func (r RepositoryImpl) ImageMetadata(imgRef string, insecure bool) (imageInfo *
 	return imageInfo, nil
 }
 
+func (r RepositoryImpl) PullImage(imgRef string, insecure bool) (v1.Image, error) {
+	options := []crane.Option{
+		crane.WithContext(context.Background()),
+	}
+
+	if insecure {
+		options = append(options, crane.Insecure)
+	}
+
+	img, err := crane.Pull(imgRef, options...)
+	if err != nil {
+		return nil, fmt.Errorf("error pulling image %s: %w", imgRef, err)
+	}
+
+	return img, nil
+}
+
 func (r RepositoryImpl) PushImage(img v1.Image, imgRef string) error {
 	if err := crane.Push(img, imgRef, crane.WithContext(context.Background())); err != nil {
 		return fmt.Errorf("error pushing image %q: %v", img, err)
 	}
 
 	return nil
+}
+
+func (r RepositoryImpl) MutateAnnotations(img v1.Image, annotations map[string]string) (v1.Image, error) {
+	img, ok := mutate.Annotations(img, annotations).(v1.Image)
+	if !ok {
+		return nil, errors.New("error mutating annotations of the image")
+	}
+
+	return img, nil
 }
 
 func parseImageSource(ctx context.Context, sys *types.SystemContext, name string) (types.ImageSource, error) {
@@ -174,11 +203,11 @@ func getErrorCode(err error) errcode.ErrorCoder {
 		}
 	}
 
-	errors, ok := err.(errcode.Errors)
-	if !ok || len(errors) == 0 {
+	errs, ok := err.(errcode.Errors)
+	if !ok || len(errs) == 0 {
 		return nil
 	}
-	err = errors[0]
+	err = errs[0]
 	ec, ok := err.(errcode.ErrorCoder)
 	if !ok {
 		return nil

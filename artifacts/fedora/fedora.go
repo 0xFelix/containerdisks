@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"strings"
 
+	kvirtv1 "kubevirt.io/api/core/v1"
 	"kubevirt.io/containerdisks/pkg/api"
 	"kubevirt.io/containerdisks/pkg/docs"
 	"kubevirt.io/containerdisks/pkg/http"
+	"kubevirt.io/kubevirt/tests/libvmi"
 )
 
 type Releases []Release
@@ -66,6 +68,26 @@ func (f *fedora) Inspect() (*api.ArtifactDetails, error) {
 		}
 	}
 	return nil, fmt.Errorf("no release information in releases.json for fedora:%q found", f.Version)
+}
+
+func (f *fedora) VMI(imgRef string) *kvirtv1.VirtualMachineInstance {
+	options := []libvmi.Option{
+		libvmi.WithRng(),
+		libvmi.WithUefi(false),
+		libvmi.WithContainerImage(imgRef),
+		libvmi.WithResourceMemory("1024M"),
+		libvmi.WithTerminationGracePeriod(libvmi.DefaultTestGracePeriod),
+		libvmi.WithCloudInitNoCloudUserData(
+			"#cloud-config\nsystem_info:\n  default_user:\n    name: fedora\n    plain_text_passwd: fedora\n    lock_passwd: False\nwrite_files:\n  - path: /etc/profile.d/disable-bracketed-paste.sh\n    content: |\n      bind 'set enable-bracketed-paste off'\n    permissions: '0755'\n",
+			false,
+		),
+	}
+
+	return libvmi.New(libvmi.RandName(f.Metadata().Name), options...)
+}
+
+func (f *fedora) Tests() []api.ArtifactTest {
+	return []api.ArtifactTest{}
 }
 
 func (f *fedora) releaseMatches(release *Release) bool {
