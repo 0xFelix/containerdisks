@@ -1,6 +1,7 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -12,6 +13,7 @@ import (
 
 const (
 	LabelShaSum        = "shasum"
+	AnnotationVerified = "verified"
 )
 
 func BuildContainerDisk(imgPath string, checksum string) (v1.Image, error) {
@@ -33,6 +35,11 @@ func BuildContainerDisk(imgPath string, checksum string) (v1.Image, error) {
 	img, err = mutate.Config(img, v1.Config{Labels: map[string]string{LabelShaSum: checksum}})
 	if err != nil {
 		return nil, fmt.Errorf("error appending labels to the image: %v", err)
+	}
+
+	img, ok := mutate.Annotations(img, map[string]string{AnnotationVerified: "false"}).(v1.Image)
+	if !ok {
+		return nil, errors.New("error appending annotations to the image")
 	}
 
 	if err := <-errChan; err != nil {
